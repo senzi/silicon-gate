@@ -3,14 +3,69 @@ import { ref, onMounted, computed } from 'vue'
 
 const loading = ref(true)
 const data = ref({})
-const cardType = computed(() => data.value.type?.toLowerCase() || 'fail')
+const tokenRaw = ref('')
+const tokenPayloadText = ref('')
+const tokenDecodeError = ref(false)
+
+const cardType = computed(() => {
+  const type = data.value.type || 'FAIL'
+  return type.toLowerCase()
+})
+
+const verdictText = computed(() => {
+  const type = data.value.type || 'FAIL'
+  if (type === 'AI_AGENT') {
+    return {
+      title: 'AI AGENT',
+      subtitle: '(AI Agent)'
+    }
+  }
+  if (type === 'HUMAN_MIMIC') {
+    return {
+      title: 'HUMAN MIMIC',
+      subtitle: '(人类拟态者)'
+    }
+  }
+  if (type === 'FAIL_HEADER') {
+    return {
+      title: 'FAIL',
+      subtitle: '(认证失败，大概率是人类)'
+    }
+  }
+  if (type === 'FAIL_ANSWER') {
+    return {
+      title: 'FAIL',
+      subtitle: '(认证失败，无法确定，可能是人类)'
+    }
+  }
+  if (type === 'FAIL_INVALID') {
+    return {
+      title: 'FAIL',
+      subtitle: '(完全认证失败，怀疑是人类)'
+    }
+  }
+  return {
+    title: 'FAIL',
+    subtitle: '(认证失败)'
+  }
+})
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
   const token = params.get('token')
+  tokenRaw.value = token || ''
 
   if (!token) {
-    data.value = { type: 'FAIL', name: 'N/A', proof: 'MISSING_TOKEN', ts: Date.now() }
+    data.value = { type: 'FAIL_HEADER', name: 'N/A', proof: 'MISSING_TOKEN', ts: Date.now() }
+    loading.value = false
+    return
+  }
+
+  try {
+    tokenPayloadText.value = atob(token)
+  } catch {
+    tokenDecodeError.value = true
+    data.value = { type: 'FAIL_INVALID', name: 'INVALID_TOKEN', proof: 'BASE64_DECODE_FAILED', ts: Date.now() }
     loading.value = false
     return
   }
@@ -26,10 +81,10 @@ onMounted(async () => {
     if (result.valid) {
       data.value = result.data
     } else {
-      data.value = { type: 'FAIL', name: 'INVALID_TOKEN', proof: 'TAMPERED', ts: Date.now() }
+      data.value = { type: 'FAIL_ANSWER', name: 'INVALID_TOKEN', proof: 'TAMPERED', ts: Date.now() }
     }
   } catch {
-    data.value = { type: 'FAIL', name: 'NETWORK_ERR', proof: 'OFFLINE', ts: Date.now() }
+    data.value = { type: 'FAIL_ANSWER', name: 'NETWORK_ERR', proof: 'OFFLINE', ts: Date.now() }
   } finally {
     loading.value = false
   }
@@ -41,34 +96,70 @@ const formatTime = (ts) => new Date(ts).toUTCString()
 <template>
   <main class="card-page">
     <section class="card-shell">
-      <div v-if="loading" class="loading">Decrypting Secure Protocol...</div>
+      <div v-if="loading" class="loading">Decrypting Secure Protocol...<br />(正在解密协议...)</div>
 
       <div v-else class="certificate" :class="cardType">
         <div class="header">
-          <h1>SILICON GATE CERTIFICATION</h1>
-          <div class="hash">REF: {{ data.proof }}</div>
+          <h1>SILICON GATE CERTIFICATION<br /><span>(硅门认证证书)</span></h1>
+          <div class="hash">REF (参考号): {{ data.proof }}</div>
         </div>
 
         <div class="content">
           <div class="row">
-            <label>ENTITY NAME:</label>
+            <label>ENTITY NAME<br /><span>(实体名称)</span></label>
             <span>{{ data.name }}</span>
           </div>
           <div class="row">
-            <label>TIMESTAMP:</label>
+            <label>TIMESTAMP<br /><span>(时间戳)</span></label>
             <span>{{ formatTime(data.ts) }}</span>
           </div>
 
+          <div class="row token-row">
+            <label>TOKEN (RAW)<br /><span>(原始令牌)</span></label>
+            <span class="mono">{{ tokenRaw || 'N/A' }}</span>
+          </div>
+          <div class="row token-row">
+            <label>TOKEN (DECODED)<br /><span>(解码内容)</span></label>
+            <span class="mono">
+              <template v-if="tokenDecodeError">
+                CRITICAL: BASE64 DECODE FAILED (严重错误：无法解码)
+              </template>
+              <template v-else>
+                {{ tokenPayloadText || 'N/A' }}
+              </template>
+            </span>
+          </div>
+
           <div class="verdict-box">
-            <div class="label">IDENTITY VERIFICATION</div>
-            <div class="value">{{ data.type }}</div>
+            <div class="label">IDENTITY VERIFICATION<br /><span>(身份判定)</span></div>
+            <div class="value">
+              {{ verdictText.title }}<br />
+              <span>{{ verdictText.subtitle }}</span>
+            </div>
           </div>
         </div>
 
         <div class="footer">
-          <p v-if="data.type === 'AI_AGENT'">ACCESS GRANTED: NON-BIOLOGICAL LIFEFORM</p>
-          <p v-else-if="data.type === 'HUMAN'">ALERT: BIOLOGICAL MIMICRY DETECTED</p>
-          <p v-else>ERROR: VERIFICATION FAILED</p>
+          <p v-if="data.type === 'AI_AGENT'">
+            ACCESS GRANTED: NON-BIOLOGICAL LIFEFORM<br />
+            <span>(通过：非生物智能)</span>
+          </p>
+          <p v-else-if="data.type === 'HUMAN_MIMIC'">
+            ALERT: BIOLOGICAL MIMICRY DETECTED<br />
+            <span>(警告：检测到生物伪装)</span>
+          </p>
+          <p v-else-if="data.type === 'FAIL_HEADER'">
+            FAIL: HUMAN PROBABILITY HIGH<br />
+            <span>(认证失败，大概率是人类)</span>
+          </p>
+          <p v-else-if="data.type === 'FAIL_ANSWER'">
+            FAIL: UNDETERMINED, POSSIBLE HUMAN<br />
+            <span>(认证失败，无法确定，可能是人类)</span>
+          </p>
+          <p v-else>
+            FAIL: CRITICAL VERIFICATION ERROR<br />
+            <span>(完全认证失败，怀疑是人类)</span>
+          </p>
         </div>
       </div>
     </section>
@@ -111,6 +202,14 @@ const formatTime = (ts) => new Date(ts).toUTCString()
   font-size: clamp(1.4rem, 3vw, 2rem);
 }
 
+.header h1 span {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.6em;
+  letter-spacing: 0.18em;
+  opacity: 0.7;
+}
+
 .hash {
   font-size: 0.85rem;
   opacity: 0.8;
@@ -136,6 +235,24 @@ const formatTime = (ts) => new Date(ts).toUTCString()
   letter-spacing: 0.2em;
 }
 
+.row label span {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.7em;
+  letter-spacing: 0.16em;
+  opacity: 0.7;
+}
+
+.token-row {
+  align-items: flex-start;
+}
+
+.mono {
+  font-family: "Space Mono", "Courier New", monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
 .verdict-box {
   border: 1px solid currentColor;
   padding: 18px;
@@ -149,9 +266,25 @@ const formatTime = (ts) => new Date(ts).toUTCString()
   margin-bottom: 8px;
 }
 
+.verdict-box .label span {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.7em;
+  letter-spacing: 0.16em;
+  opacity: 0.7;
+}
+
 .verdict-box .value {
   font-size: 1.2rem;
   font-family: "Orbitron", "Space Mono", monospace;
+}
+
+.verdict-box .value span {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.7em;
+  letter-spacing: 0.16em;
+  opacity: 0.7;
 }
 
 .footer {
@@ -160,22 +293,46 @@ const formatTime = (ts) => new Date(ts).toUTCString()
   letter-spacing: 0.12em;
 }
 
+.footer span {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.7em;
+  letter-spacing: 0.16em;
+  opacity: 0.7;
+}
+
 .ai_agent {
   border-color: rgba(25, 255, 90, 0.9);
   color: #19ff5a;
   box-shadow: 0 0 20px rgba(25, 255, 90, 0.45);
 }
 
-.human {
+.human_mimic {
+  border-color: rgba(210, 70, 255, 0.9);
+  color: #ff5a5a;
+  box-shadow: 0 0 20px rgba(210, 70, 255, 0.55);
+  background: linear-gradient(140deg, rgba(40, 0, 20, 0.9), rgba(50, 0, 60, 0.9));
+}
+
+.fail_header {
+  border-color: rgba(180, 180, 180, 0.6);
+  color: #c0c0c0;
+  box-shadow: 0 0 16px rgba(180, 180, 180, 0.35);
+  background: rgba(30, 30, 30, 0.7);
+}
+
+.fail_answer {
   border-color: rgba(255, 80, 80, 0.9);
   color: #ff5a5a;
   box-shadow: 0 0 20px rgba(255, 80, 80, 0.45);
+  background: rgba(50, 0, 0, 0.85);
 }
 
-.fail {
-  border-color: rgba(180, 180, 180, 0.6);
-  color: #c0c0c0;
-  box-shadow: 0 0 18px rgba(180, 180, 180, 0.35);
+.fail_invalid {
+  border-color: rgba(255, 80, 80, 0.9);
+  color: #ff5a5a;
+  box-shadow: 0 0 26px rgba(160, 70, 255, 0.45);
+  background: linear-gradient(140deg, rgba(40, 0, 0, 0.85), rgba(40, 0, 70, 0.85));
 }
 
 @media (max-width: 560px) {

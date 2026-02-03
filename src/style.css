@@ -68,6 +68,13 @@ body::before {
   font-size: clamp(1.8rem, 3vw, 2.6rem);
 }
 
+.headline h1 span {
+  display: inline-block;
+  font-size: 0.6em;
+  letter-spacing: 0.2em;
+  opacity: 0.7;
+}
+
 .headline p {
   margin: 0;
   opacity: 0.8;
@@ -89,6 +96,35 @@ body::before {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
+.token-box {
+  margin-top: 32px;
+  display: grid;
+  gap: 14px;
+  text-align: center;
+}
+
+.token-box label {
+  font-size: 0.8rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.token-box input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgba(25, 255, 90, 0.5);
+  background: rgba(0, 0, 0, 0.7);
+  color: #19ff5a;
+  font-family: "Space Mono", "Courier New", monospace;
+  font-size: 0.95rem;
+}
+
+.token-box input:focus {
+  outline: none;
+  box-shadow: 0 0 12px rgba(25, 255, 90, 0.25);
+}
+
 .btn {
   padding: 18px 20px;
   border-radius: 0;
@@ -100,6 +136,14 @@ body::before {
   text-transform: uppercase;
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.btn span {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.75em;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
 }
 
 .btn:hover {
@@ -134,6 +178,14 @@ body::before {
   font-size: 1.1rem;
 }
 
+.modal h2 span {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.75em;
+  letter-spacing: 0.16em;
+  opacity: 0.7;
+}
+
 .modal p {
   margin: 0 0 20px;
   opacity: 0.85;
@@ -146,5 +198,9 @@ body::before {
 
   .btn {
     letter-spacing: 0.14em;
+  }
+
+  .token-box input {
+    font-size: 0.9rem;
   }
 }
