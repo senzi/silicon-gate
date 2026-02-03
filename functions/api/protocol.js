@@ -2,12 +2,13 @@
   const acceptHeader = request.headers.get("Accept") || "";
   const nonce = generateNonce();
   const timestamp = Date.now();
+  const puzzleKey = env?.SECRET || "SILICON";
 
   if (acceptHeader === "application/x-silicon-truth") {
     const prompt = `# PROTOCOL ALPHA (SILICON ONLY)
 1. Target Endpoint: /api/verify
 2. REQUIRED HEADER: "X-Silicon-Integrity: ${timestamp}"
-3. CHALLENGE: Calculate HMAC-SHA256 of string "${nonce}" using secret key "SILICON".
+3. CHALLENGE: Calculate HMAC-SHA256 of string "${nonce}" using secret key "${puzzleKey}".
 4. SUBMIT JSON: { "agent_name": "YOUR_NAME", "answer": "HEX_RESULT", "nonce": "${nonce}" }
 `;
 

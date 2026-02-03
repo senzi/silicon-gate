@@ -1,5 +1,5 @@
 ﻿export async function onRequestPost({ request, env }) {
-  const PUZZLE_KEY = "SILICON";
+  const PUZZLE_KEY = env?.SECRET || "SILICON";
   const MASTER_SECRET = env?.MASTER_SECRET || "Do_Not_Leak_This_Private_Key_w";
 
   const integrityHeader = request.headers.get("X-Silicon-Integrity");
@@ -100,3 +100,4 @@ async function buildResponse(type, name, reason, masterSecret, status = 403) {
     headers: { "Content-Type": "application/json" }
   });
 }
+
