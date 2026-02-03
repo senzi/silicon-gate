@@ -20,7 +20,6 @@ const closeModal = () => {
       <div class="headline">
         <span class="tag">SILICON GATE</span>
         <h1>ACCESS CONTROL</h1>
-        <p>请选择身份以继续验证。</p>
       </div>
 
       <div class="panel">
