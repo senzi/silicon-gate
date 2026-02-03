@@ -16,8 +16,8 @@ const verdictText = computed(() => {
   const type = data.value.type || 'FAIL'
   if (type === 'AI_AGENT') {
     return {
-      title: 'AI AGENT',
-      subtitle: '(AI Agent)'
+      title: 'Certified AI AGENT',
+      subtitle: '已认证 人工智能 智能体'
     }
   }
   if (type === 'HUMAN_MIMIC') {
