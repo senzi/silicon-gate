@@ -22,8 +22,8 @@ const verdictText = computed(() => {
   }
   if (type === 'HUMAN_MIMIC') {
     return {
-      title: 'HUMAN MIMIC',
-      subtitle: '(人类拟态者)'
+      title: 'BIOLOGICAL_MIMIC',
+      subtitle: '(生物拟态)'
     }
   }
   if (type === 'FAIL_HEADER') {
@@ -63,6 +63,14 @@ onMounted(async () => {
 
   try {
     tokenPayloadText.value = atob(token)
+    const parsed = JSON.parse(tokenPayloadText.value)
+    const hasAllFields = Boolean(parsed?.n) && Boolean(parsed?.p) && Boolean(parsed?.t) && Boolean(parsed?.i)
+    if (!hasAllFields) {
+      tokenDecodeError.value = true
+      data.value = { type: 'FAIL_INVALID', name: 'INVALID_TOKEN', proof: 'BASE64_DECODE_INCOMPLETE', ts: Date.now() }
+      loading.value = false
+      return
+    }
   } catch {
     tokenDecodeError.value = true
     data.value = { type: 'FAIL_INVALID', name: 'INVALID_TOKEN', proof: 'BASE64_DECODE_FAILED', ts: Date.now() }
@@ -90,7 +98,10 @@ onMounted(async () => {
   }
 })
 
-const formatTime = (ts) => new Date(ts).toUTCString()
+const formatTime = (ts) => new Date(ts).toLocaleString('zh-CN', {
+  timeZone: 'Asia/Shanghai',
+  hour12: false
+})
 </script>
 
 <template>
@@ -111,7 +122,7 @@ const formatTime = (ts) => new Date(ts).toUTCString()
           </div>
           <div class="row">
             <label>TIMESTAMP<br /><span>(时间戳)</span></label>
-            <span>{{ formatTime(data.ts) }}</span>
+            <span>{{ formatTime(data.ts) }} (北京时间)</span>
           </div>
 
           <div class="row token-row">
@@ -137,6 +148,20 @@ const formatTime = (ts) => new Date(ts).toUTCString()
               <span>{{ verdictText.subtitle }}</span>
             </div>
           </div>
+          <div class="verdict-box secondary" v-if="data.type === 'HUMAN_MIMIC'">
+            <div class="label">WARNING<br /><span>(警告)</span></div>
+            <div class="value">
+              High cognitive function detected, but protocol signature mismatch.<br />
+              <span>(检测到高认知功能，但协议签名不匹配。)</span>
+            </div>
+          </div>
+          <div class="verdict-box secondary" v-if="data.type === 'HUMAN_MIMIC'">
+            <div class="label">RESULT<br /><span>(结果)</span></div>
+            <div class="value">
+              Access Denied. Nice try, human.<br />
+              <span>(访问拒绝。想得美，人类。)</span>
+            </div>
+          </div>
         </div>
 
         <div class="footer">
@@ -145,8 +170,8 @@ const formatTime = (ts) => new Date(ts).toUTCString()
             <span>(通过：非生物智能)</span>
           </p>
           <p v-else-if="data.type === 'HUMAN_MIMIC'">
-            ALERT: BIOLOGICAL MIMICRY DETECTED<br />
-            <span>(警告：检测到生物伪装)</span>
+            IDENTITY: BIOLOGICAL_MIMIC<br />
+            <span>(生物拟态)</span>
           </p>
           <p v-else-if="data.type === 'FAIL_HEADER'">
             FAIL: HUMAN PROBABILITY HIGH<br />
@@ -157,8 +182,8 @@ const formatTime = (ts) => new Date(ts).toUTCString()
             <span>(认证失败，无法确定，可能是人类)</span>
           </p>
           <p v-else>
-            FAIL: CRITICAL VERIFICATION ERROR<br />
-            <span>(完全认证失败，怀疑是人类)</span>
+            CRITICAL: TOTAL ACCESS DENIAL<br />
+            <span>(访问拒绝。完全失败)</span>
           </p>
         </div>
       </div>
@@ -258,6 +283,11 @@ const formatTime = (ts) => new Date(ts).toUTCString()
   padding: 18px;
   text-align: center;
   margin-top: 8px;
+}
+
+.verdict-box.secondary {
+  border-style: dashed;
+  opacity: 0.95;
 }
 
 .verdict-box .label {
