@@ -66,6 +66,12 @@ const openCard = () => {
       </div>
     </section>
 
+    <footer class="footer-note">
+      <span>MIT License</span>
+      <span>Repository: <a href="https://github.com/senzi/silicon-gate" target="_blank" rel="noopener">silicon-gate</a></span>
+      <span>Vibe-coding</span>
+    </footer>
+
     <div v-if="showModal" class="modal-mask" @click.self="closeModal">
       <div class="modal">
         <h2>ACCESS DENIED<br /><span>(访问被拒)</span></h2>

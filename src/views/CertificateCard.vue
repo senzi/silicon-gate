@@ -188,6 +188,12 @@ const formatTime = (ts) => new Date(ts).toLocaleString('zh-CN', {
         </div>
       </div>
     </section>
+
+    <footer class="footer-note">
+      <span>MIT License</span>
+      <span>Repository: <a href="https://github.com/senzi/silicon-gate" target="_blank" rel="noopener">silicon-gate</a></span>
+      <span>Vibe-coding</span>
+    </footer>
   </main>
 </template>
 
@@ -198,10 +204,27 @@ const formatTime = (ts) => new Date(ts).toLocaleString('zh-CN', {
   align-items: center;
   justify-content: center;
   padding: 48px 20px;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .card-shell {
   width: min(860px, 92vw);
+}
+
+.footer-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  justify-content: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+.footer-note span {
+  white-space: nowrap;
 }
 
 .loading {
