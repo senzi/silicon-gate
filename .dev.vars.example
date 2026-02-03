@@ -1,1 +1,2 @@
 ﻿SECRET="SILICON"
+MASTER_SECRET="Do_Not_Leak_This_Private_Key_w"

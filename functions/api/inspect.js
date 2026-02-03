@@ -1,4 +1,6 @@
 ﻿export async function onRequestPost({ request, env }) {
+  const MASTER_SECRET = env?.MASTER_SECRET || "Do_Not_Leak_This_Private_Key_w";
+
   let body = null;
   try {
     body = await request.json();
@@ -10,54 +12,73 @@
   }
 
   const token = body?.token || "";
-  if (!token || !token.includes('.')) {
+  if (!token) {
     return new Response(JSON.stringify({ valid: false, error: "Missing Token" }), {
       status: 400,
       headers: { "Content-Type": "application/json" }
     });
   }
 
-  const secret = env?.SECRET || "SILICON";
-  const [payload, sig] = token.split('.');
-
-  const expectedSig = await hmacHex(payload, secret);
-  if (sig !== expectedSig) {
-    return new Response(JSON.stringify({ valid: false, error: "Tampered Token" }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-
-  let data = null;
+  let payload = null;
   try {
-    data = JSON.parse(atob(payload));
+    payload = JSON.parse(atob(token));
   } catch {
-    return new Response(JSON.stringify({ valid: false, error: "Invalid Payload" }), {
+    return new Response(JSON.stringify({ valid: false, error: "Malformed Token" }), {
       status: 400,
       headers: { "Content-Type": "application/json" }
     });
   }
 
+  const name = payload?.n || "Unknown";
+  const proof = payload?.p || "";
+  const nonce = payload?.i || "";
+  const ts = payload?.t || Date.now();
+
+  if (!proof) {
+    return new Response(JSON.stringify({ valid: false, error: "Invalid Proof" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
+  const validProofAI = await calculateHmac(`AI_AGENT:${nonce}`, MASTER_SECRET);
+  const validProofHuman = await calculateHmac(`HUMAN_MIMIC:${nonce}`, MASTER_SECRET);
+  const validProofFailHeader = await calculateHmac(`FAIL_HEADER:${nonce}`, MASTER_SECRET);
+  const validProofFailAnswer = await calculateHmac(`FAIL_ANSWER:${nonce}`, MASTER_SECRET);
+
+  let detectedType = "INVALID";
+
+  if (proof === validProofAI) {
+    detectedType = "AI_AGENT";
+  } else if (proof === validProofHuman) {
+    detectedType = "HUMAN_MIMIC";
+  } else if (proof === validProofFailHeader) {
+    detectedType = "FAIL_HEADER";
+  } else if (proof === validProofFailAnswer) {
+    detectedType = "FAIL_ANSWER";
+  }
+
   return new Response(JSON.stringify({
-    valid: true,
-    data
+    valid: detectedType !== "INVALID",
+    data: {
+      name,
+      type: detectedType,
+      ts
+    }
   }), {
     headers: { "Content-Type": "application/json" }
   });
 }
 
-async function hmacHex(message, secret) {
-  const key = await crypto.subtle.importKey(
+async function calculateHmac(message, key) {
+  const enc = new TextEncoder();
+  const keyData = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(secret),
+    enc.encode(key),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
-  return toHex(new Uint8Array(signature));
-}
-
-function toHex(bytes) {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  const sig = await crypto.subtle.sign("HMAC", keyData, enc.encode(message));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }

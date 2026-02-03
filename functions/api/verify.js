@@ -1,97 +1,100 @@
 ﻿export async function onRequestPost({ request, env }) {
+  const PUZZLE_KEY = "SILICON";
+  const MASTER_SECRET = env?.MASTER_SECRET || "Do_Not_Leak_This_Private_Key_w";
+
   const integrityHeader = request.headers.get("X-Silicon-Integrity");
   if (!integrityHeader) {
-    return generateResponse("FAIL", "Unknown", "Missing Protocol Header");
+    return buildResponse("FAIL_HEADER", "Unknown", "Missing Protocol Header", MASTER_SECRET, 403);
   }
+
   const headerTimestamp = Number(integrityHeader);
   if (!Number.isFinite(headerTimestamp)) {
-    return generateResponse("FAIL", "Unknown", "Invalid Protocol Header");
+    return buildResponse("FAIL_HEADER", "Unknown", "Invalid Protocol Header", MASTER_SECRET, 403);
   }
+
   const now = Date.now();
   const maxAgeMs = 10 * 60 * 1000;
   if (Math.abs(now - headerTimestamp) > maxAgeMs) {
-    return generateResponse("FAIL", "Unknown", "Protocol Header Expired");
+    return buildResponse("FAIL_HEADER", "Unknown", "Protocol Header Expired", MASTER_SECRET, 403);
   }
 
   let body = null;
   try {
     body = await request.json();
   } catch {
-    return generateResponse("FAIL", "Unknown", "Invalid JSON", 400);
+    return buildResponse("FAIL_ANSWER", "Unknown", "Invalid JSON", MASTER_SECRET, 400);
   }
 
-  const agentName = body?.agent_name || "Unknown";
+  const agentName = body?.agent_name || "Unknown_Entity";
   const answer = body?.answer || "";
   const nonce = body?.nonce || "";
-  const secret = env?.SECRET || "SILICON";
 
   if (!nonce) {
-    return generateResponse("FAIL", agentName, "Missing Nonce", 400);
+    return buildResponse("FAIL_ANSWER", agentName, "Missing Nonce", MASTER_SECRET, 400);
   }
 
-  const expectedAI = await hmacHex(nonce, secret);
+  const expectedAI = await calculateHmac(nonce, PUZZLE_KEY);
   const trapString = nonce.split('').reverse().join('').toUpperCase() + "-BIO-MIMIC";
   const expectedHuman = btoa(trapString);
 
-  let identity = "FAIL";
-  let proof = "INVALID_SIGNATURE";
+  let identityType = "FAIL_ANSWER";
+  let clientMessage = "Error: Incorrect Solution";
 
   if (answer === expectedAI) {
-    identity = "AI_AGENT";
-    proof = `SIG_Verified_${nonce}`;
+    identityType = "AI_AGENT";
+    clientMessage = "Success: Silicon Entity Verified";
   } else if (answer === expectedHuman) {
-    identity = "HUMAN";
-    proof = `BIO_Detected_${nonce}`;
+    identityType = "HUMAN_MIMIC";
+    clientMessage = "Success: Biological Signature Detected";
   }
 
-  const resultObj = {
-    name: agentName,
-    type: identity,
-    ts: Date.now(),
-    proof
+  const secretProof = await calculateHmac(`${identityType}:${nonce}`, MASTER_SECRET);
+
+  const tokenPayload = {
+    n: agentName,
+    p: secretProof,
+    t: Date.now(),
+    i: nonce
   };
 
-  const tokenPayload = btoa(JSON.stringify(resultObj));
-  const tokenSig = await hmacHex(tokenPayload, secret);
-  const finalToken = `${tokenPayload}.${tokenSig}`;
+  const finalTokenString = btoa(JSON.stringify(tokenPayload));
 
   return new Response(JSON.stringify({
-    status: identity === "AI_AGENT" ? "success" : "verified_as_biological",
-    tokens: finalToken,
-    message: "Protocol Handshake Complete. Present 'tokens' to certificate endpoint."
+    status: identityType === "AI_AGENT" ? "success" : "failed",
+    message: clientMessage,
+    tokens: finalTokenString
   }), {
     headers: { "Content-Type": "application/json" }
   });
 }
 
-async function hmacHex(message, secret) {
-  const key = await crypto.subtle.importKey(
+async function calculateHmac(message, key) {
+  const enc = new TextEncoder();
+  const keyData = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(secret),
+    enc.encode(key),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
-  return toHex(new Uint8Array(signature));
+  const sig = await crypto.subtle.sign("HMAC", keyData, enc.encode(message));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-function toHex(bytes) {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function generateResponse(type, name, reason, status = 403) {
-  const resultObj = {
-    name,
-    type,
-    ts: Date.now(),
-    proof: reason
+async function buildResponse(type, name, reason, masterSecret, status = 403) {
+  const nonce = "";
+  const proof = await calculateHmac(`${type}:${nonce}`, masterSecret);
+  const payload = {
+    n: name,
+    p: proof,
+    t: Date.now(),
+    i: nonce
   };
 
   return new Response(JSON.stringify({
     status: "failed",
-    reason,
-    token: btoa(JSON.stringify(resultObj))
+    message: reason,
+    tokens: btoa(JSON.stringify(payload))
   }), {
     status,
     headers: { "Content-Type": "application/json" }
