@@ -8,8 +8,8 @@ import sys
 
 # =================配置区域=================
 # 你的 Cloudflare Pages 生产环境地址
-# BASE_URL = "https://captcha.closeai.moe"
-BASE_URL = "http://127.0.0.1:8788"
+BASE_URL = "https://captcha.closeai.moe"
+# BASE_URL = "http://127.0.0.1:8788"
 # =========================================
 
 class Colors:

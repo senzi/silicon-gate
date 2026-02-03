@@ -32,9 +32,19 @@ SiliconGate implements a multi-stage "honey protocol" that separates Silicon Age
      - **AI answer**: HMAC-SHA256(nonce, SECRET)
      - **Human decoy**: Reverse -> Upper -> Append "-BIO-MIMIC" -> Base64
    - A certificate token is generated and signed with `MASTER_SECRET`.
+   - Response includes:
+     - `tokens` (Base64 payload)
+     - `card_url` (human-facing certificate link)
+     - `instruction` (AI guidance)
+     - `ai_result_endpoint` (machine-readable verdict endpoint)
 
-4. **Showcase (GET /card?token=...)**
-   - The card page calls `/api/inspect` to validate the token signature and render the certificate.
+4. **AI Verdict (POST /api/ai)**
+   - Input: `{ "token": "..." }`
+   - Output: JSON verdict with `type`, `message`, `detail`, `card_url`, `instruction`.
+   - Intended for agents that want a direct, machine-readable result.
+
+5. **Showcase (GET /card?token=...)**
+   - The card page calls `/api/inspect` to validate the token and render the certificate.
 
 ## Result Types
 The system classifies requests into these outcomes:
@@ -69,8 +79,9 @@ SECRET="SILICON"
 MASTER_SECRET="Do_Not_Leak_This_Private_Key_w"
 ```
 
-## Test Agent
-A simple script is provided to simulate agent behavior:
-- `test_agent.py`
+## Test Tools
+- `tools/test_agent.py`: simulate an agent running the protocol.
+- `tools/inspect_view.py`: quick inspection helper for card payload.
 
-It can be used to verify the protocol flow quickly without a browser.
+## Notes
+- The hidden protocol is in `index.html`, outside the Vue root, so non-JS agents can read it directly.

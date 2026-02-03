@@ -6,7 +6,7 @@ import hashlib
 import sys
 
 # 配置
-BASE_URL = "http://127.0.0.1:8788" 
+BASE_URL = "https://captcha.closeai.moe"
 
 class Colors:
     HEADER = '\033[95m'
